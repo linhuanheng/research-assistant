@@ -1,0 +1,232 @@
+---
+name: research-assistant
+description: 面向经管类学术研究和量化交易策略开发的一键项目脚手架工具。当用户需要搭建研究项目框架、初始化量化研究项目、创建经管类研究工作目录、开始一个新的经济学/金融学研究项目时使用此 skill。也适用于用户提及"新建研究项目"、"初始化策略项目"、"搭建研究框架"、"开始一篇论文"等场景。
+---
+
+# 研究项目助手 (Research Assistant)
+
+本 skill 帮助用户一键搭建经管类研究性质工作的项目结构框架，覆盖学术研究和量化交易策略开发两大场景。
+
+## 核心原则
+
+### 1. 三层模块架构
+项目结构遵循三个逻辑模块，以一级文件夹体现：
+
+- **foundation/** — 依据类模块：项目的知识基础和数据支撑
+- **execution/** — 执行方案模块：研究设计文档和代码实现
+- **results/** — 结果模块：研究成果产出
+
+### 2. 按需生成
+- 固定骨架（CLAUDE.md、README.md、.claude/ 配置）必须生成
+- `execution/code/` 的子目录和 `results/` 的具体内容由用户研究场景驱动，不预设
+- 询问用户研究类型（学术研究 / 量化策略 / 混合）后再确定具体配置
+
+### 3. 渐进式配置
+- 子 agent、钩子、项目级技能等高级配置逐步添加
+- 用户明确需要时才创建，不预设空壳
+
+## 工作流程
+
+### 第一阶段：需求确认
+
+1. **项目名称确认**：询问用户项目名称（用于创建根目录和 README.md）
+2. **研究类型确认**：
+   - 学术研究（经济学/金融学理论、实证研究、论文写作）
+   - 量化交易策略（选股/择时/套利/CTA/ML 策略等）
+   - 混合型（既有理论研究又有量化实证）
+3. **项目路径确认**：询问用户希望创建在哪个路径下
+4. **已有资源确认**：询问用户是否已有 Zotero 文库、数据源等可关联的资源
+
+### 第二阶段：项目初始化
+
+创建以下固定结构：
+
+```
+[项目名称]/
+├── foundation/                 # 依据类模块
+│   ├── knowledge/              # 知识库
+│   │   └── references/         # 知识条目的索引关系
+│   └── data/                   # 原始数据
+│       └── README.md           # 数据字典、来源说明
+│
+├── execution/                  # 执行方案模块
+│   ├── docs/                   # 研究设计、方法论文档
+│   └── code/                   # 代码（子目录按需创建）
+│
+├── results/                    # 结果模块
+│   ├── figures/                # 图表
+│   ├── tables/                 # 表格
+│   ├── reports/                # 报告、论文草稿
+│   └── exports/                # 导出文件
+│
+├── log/                        # 项目记录归档
+│   ├── conversation-log.md     # 对话摘要、关键决策
+│   ├── file-changes.md         # 文件变更表
+│   └── milestones.md           # 阶段性成果
+│
+├── .claude/                    # Claude 工程配置
+│   ├── agents/                 # 子 agent 定义
+│   ├── hooks/                  # 钩子
+│   └── settings.json
+│
+├── CLAUDE.md
+└── README.md
+```
+
+### 第三阶段：CLAUDE.md 生成
+
+CLAUDE.md 承担三项职责：**项目背景** — 让 Claude 理解研究上下文；**行为规范** — 明确什么能做、什么不能做；**操作指引** — 什么场景下该用什么工具/技能。
+
+根据研究类型选用对应模板，与用户逐项确认后填充：
+
+- **学术研究**：读取 `references/claude-academic.md` 作为模板
+- **量化策略**：读取 `references/claude-quant.md` 作为模板
+
+---
+
+### 第四阶段：后续配置（按需）
+
+#### 子 agent 部署
+
+每个子 agent 包含两部分工作：
+1. 将 agent 定义文件写入 `.claude/agents/<agent-name>.md`
+2. 在 CLAUDE.md 的 "Agent 使用场景" 表格中添加对应条目
+
+**已有子 agent**：初始化时自动部署 recorder agent，提示用户是否部署 auditor agent。后续用户定义新 agent 时，更新上述两处。
+
+##### recorder — 项目记录员
+
+自主判断该次对话是否需要记录。如果需要记录，执行以下操作：
+
+**本地日志更新**（`log/` 目录）：
+
+| 文件 | 内容 | 更新规则 |
+|------|------|---------|
+| `log/conversation-log.md` | 对话摘要：讨论主题、关键决策、偏好变更、相关结果 | 追加新条目 |
+| `log/file-changes.md` | 文件变更表：`文件路径 \| 首次记录时间 \| 最后修改时间` | 新文件新增行；已有文件只更新"最后修改时间" |
+| `log/milestones.md` | 阶段性成果：完成一轮文献综述、跑完一组回测、定稿一章等 | 追加新条目 |
+
+**GitHub 推送**：
+- 仓库地址在项目初始化时配置
+- 阶段性成果由 agent 自主判断
+- 推送内容包括 `log/` 和 `results/` 中的阶段性产出
+
+**触发方式**：
+- 被动触发：用户主动说"记录一下"、"归档"、"记录进展"等
+- 自动触发：30 分钟无新对话 → 钩子唤醒 recorder 执行记录
+
+部署到项目时，从 `references/recorder-agent.md` 生成 agent 定义文件写入 `.claude/agents/recorder.md`。
+
+##### auditor — 项目审计员
+
+审计阶段性产出的 AI 幻觉、事实性错误和规范违规。
+
+**审计模式**：
+- **学术研究**：核查引用可溯源性、概念定义准确性、数学推导正确性、数据完整性
+- **量化策略**：检查未来信息泄漏、回测计算正确性、幸存者偏差、信号与文档一致性
+
+**触发方式**：
+- 用户主动触发：说"审计"、"检查一下"、"帮我审核"、"核查"
+- 阶段性产出完成时：知识库条目、文献综述、论文草稿、回测报告完成后提示用户是否需要审计
+
+> 各审计模式下具体检查清单由用户根据情境定义，详见 `references/auditor-agent.md`。
+
+部署到项目时，从 `references/auditor-agent.md` 生成 agent 定义文件写入 `.claude/agents/auditor.md`。
+
+#### 钩子配置
+
+recorder 的自动触发依赖两个钩子脚本和一个标记文件：
+
+**工作机制**：
+
+```
+Stop 事件 → record-stop-time.sh → 写入 .claude/.last-active 时间戳
+                    ↓
+            (用户离开，30 分钟后回来)
+                    ↓
+UserPromptSubmit 事件 → check-idle-trigger.sh → 检测空闲 > 30 分钟
+                    ↓
+              写入 .claude/.trigger-recorder 标记
+                    ↓
+            CLAUDE.md 指引 Claude 检测标记 → 启动 recorder agent
+```
+
+**部署步骤**：
+
+1. 将 `references/hooks/record-stop-time.sh` 复制到 `.claude/hooks/record-stop-time.sh`
+2. 将 `references/hooks/check-idle-trigger.sh` 复制到 `.claude/hooks/check-idle-trigger.sh`
+3. 在 `.claude/settings.json` 中添加以下钩子配置：
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/record-stop-time.sh\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-idle-trigger.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**CLAUDE.md 中的配套指引**（已包含在模板的 Agent 使用场景中）：
+- 会话开始时检查 `.claude/.trigger-recorder` 是否存在
+- 存在则读取标记时间，启动 recorder agent 执行归档
+- 归档完成后清除标记文件
+
+#### 项目级技能部署
+
+从现有技能中选择部署到 `.claude/skills/`。
+
+## 集成的技能
+
+本 skill 项目的 `foundation/` 和 `execution/` 模块与以下技能协同工作：
+
+| 技能 | 对应模块 | 用途 |
+|------|---------|------|
+| `quantitative-theory-kb` | foundation/knowledge/ | 构建数理知识库 |
+| `literature-review-economics` | execution/docs/ | 文献综述整理 |
+| `webofscience-literature-search` | foundation/data/ | 文献检索 |
+| `economic-model-derivation-guidance` | execution/docs/ | 经济学模型推导 |
+
+## 使用示例
+
+### 示例 1：初始化量化策略项目
+
+用户："帮我搭建一个多因子选股策略的研究项目"
+
+流程：
+1. 确认项目名称 → `multi-factor-strategy`
+2. 确认研究类型 → 量化交易策略
+3. 询问策略逻辑、交易标的、频率、基准等背景信息，填充 CLAUDE.md 的项目概述
+4. 创建项目骨架
+5. 生成 CLAUDE.md（使用模板 B），逐项与用户确认
+6. 询问是否需要创建因子库、回测引擎等 code 子目录
+
+### 示例 2：初始化经济学实证研究项目
+
+用户："我要开始一篇关于货币政策传导机制的论文，帮我搭框架"
+
+流程：
+1. 确认项目名称 → `monetary-policy-transmission`
+2. 确认研究类型 → 学术研究
+3. 询问研究问题、预期产出、关键文献等背景信息，填充 CLAUDE.md 的项目概述
+4. 创建项目骨架
+5. 询问 Zotero 文库关联
+6. 生成 CLAUDE.md（使用模板 A），逐项与用户确认
+7. 提示可用的文献综述、知识库构建等后续操作
