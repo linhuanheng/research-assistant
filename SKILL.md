@@ -229,6 +229,17 @@ CLAUDE.md 承担三项职责：**项目背景** — 让 Claude 理解研究上�
 
 部署到项目时，从 `references/auditor-agent.md` 生成 agent 定义文件写入 `.claude/agents/auditor.md`。
 
+##### 自定义子 agent
+
+recorder 和 auditor 部署完成后，询问用户：**"除上述两个 agent 外，是否还有其他子 agent 的配置需求？"**
+
+- 若用户选择**否** → 跳过，进入钩子配置
+- 若用户选择**是** → 按用户指令逐一完成：
+  1. 确认 agent 名称、用途、触发条件
+  2. 生成 agent 定义文件 `.claude/agents/<agent-name>.md`
+  3. 在 CLAUDE.md 的 "Agent 使用场景" 表格中添加对应条目
+  4. 重复上述流程，直到用户确认无更多 agent 需求
+
 #### 钩子配置
 
 recorder 的自动触发依赖两个钩子脚本和一个标记文件：
